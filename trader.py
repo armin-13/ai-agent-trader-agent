@@ -3,6 +3,10 @@ from binance.client import Client
 from binance.exceptions import BinanceAPIException
 import os
 
+def get_price():
+    # Platzhalter: In der echten Version kannst du aktuelle Preise von Binance holen
+    return 64000.0
+
 # 📌 کلید API تست‌نت بایننس (از حساب تست‌نت بگیر)
 API_KEY = "pieViHuBmbhtWc1sh5OeilrGGfVr9gTYnRJIA6Jc1kmjytTNE93xiINrtvOONqtO"
 API_SECRET = "KnXDPzKzoAJjgMDigHPDmU0rBUFZGkVp9tU7GEserpKZVWEN2Z8LDcavCb9un4d4"
