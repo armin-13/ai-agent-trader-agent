@@ -40,5 +40,8 @@ async def dashboard(request: Request):
         "request": request,
         "results": results
     })
+    
+return templates.TemplateResponse("dashboard.html", {"request": request, "results": results})
+
 
 

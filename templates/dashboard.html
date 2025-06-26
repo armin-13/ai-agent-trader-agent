@@ -1,18 +1,46 @@
+<!-- templates/dashboard.html -->
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Crypto Agent Dashboard</title>
+    <title>AI Trading Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: center; border-bottom: 1px solid #ccc; }
+        th { background-color: #333; color: white; }
+        .buy { background-color: #c8f7c5; }
+        .sell { background-color: #f7c5c5; }
+        .hold { background-color: #fff3cd; }
+    </style>
 </head>
 <body>
-    <h1>Crypto AI Agent Dashboard</h1>
-    <p>Price: {{ analysis.price }}</p>
-    <p>Signal: <strong>{{ analysis.signal }}</strong></p>
-    <p>Sentiment Score: {{ analysis.sentiment }}</p>
-    <h3>News:</h3>
-    <p>{{ analysis.news }}</p>
-    {% if result %}
-        <h4>Order Result:</h4>
-        <pre>{{ result }}</pre>
-    {% endif %}
+    <h1>📊 AI Crypto Multi-Coin Trading Dashboard</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Symbol</th>
+                <th>Preis</th>
+                <th>Sentiment</th>
+                <th>RSI</th>
+                <th>MACD</th>
+                <th>Signal</th>
+                <th>Trade-Ergebnis</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for coin in results %}
+                <tr class="{{ 'buy' if coin.signal == 'BUY' else ('sell' if coin.signal == 'SELL' else 'hold') }}">
+                    <td>{{ coin.symbol }}</td>
+                    <td>${{ '%.2f' % coin.price }}</td>
+                    <td>{{ coin.sentiment }}</td>
+                    <td>{{ coin.rsi }}</td>
+                    <td>{{ coin.macd }}</td>
+                    <td><strong>{{ coin.signal }}</strong></td>
+                    <td>{{ coin.trade.status if coin.trade else 'n/a' }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </body>
 </html>
