@@ -31,3 +31,14 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(scheduled_job, "interval", minutes=1)
 scheduler.start()
 
+from multi_coin_agent import analyze_all
+
+@app.get("/", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    results = analyze_all()
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request,
+        "results": results
+    })
+
+
