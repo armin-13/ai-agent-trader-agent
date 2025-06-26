@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+python-binance
+requests
+transformers
+torch
+apscheduler
+jinja2

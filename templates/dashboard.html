@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Crypto Agent Dashboard</title>
+</head>
+<body>
+    <h1>Crypto AI Agent Dashboard</h1>
+    <p>Price: {{ analysis.price }}</p>
+    <p>Signal: <strong>{{ analysis.signal }}</strong></p>
+    <p>Sentiment Score: {{ analysis.sentiment }}</p>
+    <h3>News:</h3>
+    <p>{{ analysis.news }}</p>
+    {% if result %}
+        <h4>Order Result:</h4>
+        <pre>{{ result }}</pre>
+    {% endif %}
+</body>
+</html>
