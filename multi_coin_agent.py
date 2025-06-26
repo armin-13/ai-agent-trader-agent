@@ -1,4 +1,4 @@
-# multi_coin_agent.py
+# multi_coin_agent.py (mit erweitertem Debug-Logging)
 
 from sentiment import analyze_sentiment
 from news_fetcher import fetch_crypto_news
@@ -16,7 +16,6 @@ COINS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "ADAUSDT"]
 # Mindestvolumen in USDT
 MIN_VOLUME = 5000000  # Beispielwert
 
-
 def analyze_coin(symbol):
     try:
         news = fetch_crypto_news(symbol)
@@ -26,9 +25,9 @@ def analyze_coin(symbol):
         macd_signal = get_macd(symbol)
 
         # Entscheidungslogik mit Sentiment, RSI und MACD
-        if sentiment_score > 0.5 and rsi < 30 and macd_signal == "BUY":
+        if sentiment_score > 0.5 and rsi is not None and rsi < 30 and macd_signal == "BUY":
             signal = "BUY"
-        elif sentiment_score < -0.5 and rsi > 70 and macd_signal == "SELL":
+        elif sentiment_score < -0.5 and rsi is not None and rsi > 70 and macd_signal == "SELL":
             signal = "SELL"
         else:
             signal = "HOLD"
@@ -42,14 +41,14 @@ def analyze_coin(symbol):
             "macd": macd_signal
         }
 
-        # Logging
-        logging.info(f"{symbol} Analysis: {analysis}")
+        # Debug-Logging
+        logging.info(f"{symbol} ➜ Preis: ${price:.2f}, Sentiment: {sentiment_score}, RSI: {rsi}, MACD: {macd_signal}, Signal: {signal}")
 
         # Nur handeln, wenn BUY oder SELL
         result = {}
         if signal in ["BUY", "SELL"]:
             result = trade_if_needed(signal, symbol)
-            logging.info(f"{symbol} Trade Result: {result}")
+            logging.info(f"{symbol} ➜ Trade-Ergebnis: {result}")
 
         return analysis | {"trade": result}
 
@@ -57,10 +56,8 @@ def analyze_coin(symbol):
         logging.error(f"Fehler bei {symbol}: {str(e)}")
         return {"symbol": symbol, "error": str(e)}
 
-
 def analyze_all():
     return [analyze_coin(symbol) for symbol in COINS]
-
 
 if __name__ == "__main__":
     result = analyze_all()
