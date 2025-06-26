@@ -30,3 +30,4 @@ def scheduled_job():
 scheduler = BackgroundScheduler()
 scheduler.add_job(scheduled_job, "interval", minutes=1)
 scheduler.start()
+
