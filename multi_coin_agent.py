@@ -1,20 +1,22 @@
-# multi_coin_agent.py (mit erweitertem Debug-Logging)
+# multi_coin_agent.py (mit dynamischer Coin Discovery & erweitertem Logging)
 
 from sentiment import analyze_sentiment
 from news_fetcher import fetch_crypto_news
 from trader import get_price, trade_if_needed
 from indicators import get_rsi, get_macd
+from coin_discovery import get_top_usdt_symbols
 import logging
 
-# Konfiguriere Logging
-logging.basicConfig(filename="trade_log.txt", level=logging.INFO,
-                    format="%(asctime)s - %(levelname)s - %(message)s")
+# Logging konfigurieren
+logging.basicConfig(
+    filename="trade_log.txt",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
-# Liste der Coins, die überwacht werden sollen
-COINS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "ADAUSDT"]
+# Dynamische Coin-Auswahl basierend auf Volumen
+COINS = get_top_usdt_symbols(limit=25, min_volume_usdt=1000000)
 
-# Mindestvolumen in USDT
-MIN_VOLUME = 5000000  # Beispielwert
 
 def analyze_coin(symbol):
     try:
@@ -56,8 +58,11 @@ def analyze_coin(symbol):
         logging.error(f"Fehler bei {symbol}: {str(e)}")
         return {"symbol": symbol, "error": str(e)}
 
+
 def analyze_all():
+    logging.info(f"Starte Analyse für {len(COINS)} Coins...")
     return [analyze_coin(symbol) for symbol in COINS]
+
 
 if __name__ == "__main__":
     result = analyze_all()
