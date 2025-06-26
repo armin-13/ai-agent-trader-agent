@@ -1,4 +1,4 @@
-# multi_coin_agent.py (mit dynamischer Coin Discovery & verbessertem Entscheidungs-Logging)
+# multi_coin_agent.py (robustere Analyse + Testmodus)
 
 from sentiment import analyze_sentiment
 from news_fetcher import fetch_crypto_news
@@ -37,6 +37,10 @@ def analyze_coin(symbol):
         else:
             signal = "HOLD"
 
+        # TESTMODUS: Erzwinge BUY für einen Coin (nur zu Testzwecken aktivieren)
+        # if symbol == "BTCUSDT":
+        #     signal = "BUY"
+
         analysis = {
             "symbol": symbol,
             "price": price,
@@ -46,7 +50,6 @@ def analyze_coin(symbol):
             "macd": macd_signal
         }
 
-        # Debug-Logging
         logging.info(f"{symbol} ➜ Preis: ${price:.2f}, Signal: {signal}")
 
         # Nur handeln, wenn BUY oder SELL
@@ -64,7 +67,14 @@ def analyze_coin(symbol):
 
 def analyze_all():
     logging.info(f"Starte Analyse für {len(COINS)} Coins...")
-    return [analyze_coin(symbol) for symbol in COINS]
+    results = []
+    for symbol in COINS:
+        try:
+            results.append(analyze_coin(symbol))
+        except Exception as e:
+            logging.error(f"{symbol} ➜ Analysefehler: {str(e)}")
+            results.append({"symbol": symbol, "error": str(e)})
+    return results
 
 
 if __name__ == "__main__":
