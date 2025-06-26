@@ -1,47 +1,48 @@
+# main.py (verbessert)
+
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from apscheduler.schedulers.background import BackgroundScheduler
-from agent import get_analysis
-from trader import trade_if_needed
+from multi_coin_agent import analyze_all
+import logging
 
+# Logging konfigurieren
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+# FastAPI Setup
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
+# Route: Dashboard
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    analysis = get_analysis()
-    result = {}
+    logging.info("Dashboard-Anfrage erhalten")
+    try:
+        results = analyze_all()
+        return templates.TemplateResponse("dashboard.html", {
+            "request": request,
+            "results": results
+        })
+    except Exception as e:
+        logging.error(f"Fehler im Dashboard: {e}")
+        return templates.TemplateResponse("dashboard.html", {
+            "request": request,
+            "results": [],
+            "error": str(e)
+        })
 
-    if analysis["signal"] in ["BUY", "SELL"]:
-        result = trade_if_needed(analysis["signal"])
-
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "result": result,
-        "analysis": analysis
-    })
-
+# Geplante Hintergrundanalyse (z. B. jede Minute)
 def scheduled_job():
-    analysis = get_analysis()
-    if analysis["signal"] in ["BUY", "SELL"]:
-        trade_if_needed(analysis["signal"])
+    logging.info("Geplante Analyse gestartet")
+    try:
+        analyze_all()
+    except Exception as e:
+        logging.error(f"Fehler bei geplanter Analyse: {e}")
 
+# Starte Scheduler
 scheduler = BackgroundScheduler()
 scheduler.add_job(scheduled_job, "interval", minutes=1)
 scheduler.start()
 
-from multi_coin_agent import analyze_all
-
-@app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
-    results = analyze_all()
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "results": results
-    })
-    
-return templates.TemplateResponse("dashboard.html", {"request": request, "results": results})
-
-
-
+logging.info("AI Trading Agent gestartet")
