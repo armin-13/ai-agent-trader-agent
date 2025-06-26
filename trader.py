@@ -1,104 +1,88 @@
+# trader.py (erweitert mit Logging, Absicherung, Risiko-Kalkulation & Doku)
 
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
 import os
+from dotenv import load_dotenv
+import logging
+from datetime import datetime
 
-API_KEY = "pieViHuBmbhtWc1sh5OeilrGGfVr9gTYnRJIA6Jc1kmjytTNE93xiINrtvOONqtO"
-API_SECRET = "KnXDPzKzoAJjgMDigHPDmU0rBUFZGkVp9tU7GEserpKZVWEN2Z8LDcavCb9un4d4"
-# اتصال به بایننس (تست‌نت)
+# Logging konfigurieren
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("trade_log.txt"),
+        logging.StreamHandler()
+    ]
+)
+
+# Umgebungsvariablen laden
+load_dotenv()
+API_KEY = os.getenv("API_KEY")
+API_SECRET = os.getenv("API_SECRET")
+
+# Binance-Client initialisieren
 client = Client(API_KEY, API_SECRET)
 client.API_URL = 'https://testnet.binance.vision/api'
 
-def get_price():
-    # Platzhalter: In der echten Version kannst du aktuelle Preise von Binance holen
-    return 64000.0
-from binance.client import Client
-from binance.exceptions import BinanceAPIException
-
-API_KEY = "your_testnet_api_key"
-API_SECRET = "your_testnet_api_secret"
-
-client = Client(API_KEY, API_SECRET)
-client.API_URL = 'https://testnet.binance.vision/api'
-
-initial_capital_usdt = 100
-risk_percentage = 0.05
+# Kapital-Management
+initial_capital_usdt = float(os.getenv("INITIAL_USDT", 100))
+risk_percentage = float(os.getenv("RISK_PERCENTAGE", 0.05))  # z. B. 5 %
 MIN_NOTIONAL = 10
 
-def get_price():
-    ticker = client.get_symbol_ticker(symbol="BTCUSDT")
-    return float(ticker['price'])
+
+def get_price(symbol):
+    """Liefert den aktuellen Marktpreis für ein gegebenes Symbol."""
+    try:
+        ticker = client.get_symbol_ticker(symbol=symbol)
+        price = float(ticker['price'])
+        logging.info(f"{symbol} ➜ aktueller Preis: ${price:.2f}")
+        return price
+    except Exception as e:
+        logging.error(f"Fehler beim Abrufen des Preises für {symbol}: {e}")
+        return None
+
 
 def place_order(symbol="BTCUSDT", side="BUY"):
+    """Führt eine Market Order auf dem Testnet aus."""
     try:
+        price = get_price(symbol)
+        if price is None:
+            return {"status": "error", "message": "Price fetch failed"}
+
         amount_in_usdt = initial_capital_usdt * risk_percentage
 
-        print(f"[⚙️] Trying to {side} {symbol} with ${amount_in_usdt:.2f}")
-
         if amount_in_usdt < MIN_NOTIONAL:
-            print(f"[⛔️] Order skipped: ${amount_in_usdt:.2f} is below Binance MIN_NOTIONAL (${MIN_NOTIONAL})")
-            return {"status": "skipped", "reason": "below min notional"}
+            msg = f"Order übersprungen: ${amount_in_usdt:.2f} ist unter MIN_NOTIONAL (${MIN_NOTIONAL})"
+            logging.warning(msg)
+            return {"status": "skipped", "reason": msg}
+
+        logging.info(f"[⚙️] {side} {symbol} für ${amount_in_usdt:.2f}")
 
         if side == "BUY":
             order = client.order_market_buy(symbol=symbol, quoteOrderQty=amount_in_usdt)
         else:
             order = client.order_market_sell(symbol=symbol, quoteOrderQty=amount_in_usdt)
 
-        print(f"[✅] Order placed: {order}")
-        return order
+        logging.info(f"[✅] Order ausgeführt: ID {order['orderId']} | {symbol} | {side}")
+        return {"status": "filled", "order": order}
 
     except BinanceAPIException as e:
-        print(f"[❌] Binance API Error: {e.message}")
+        logging.error(f"[❌] Binance API-Fehler: {e.message}")
         return {"status": "error", "message": e.message}
     except Exception as e:
-        print(f"[‼️] General Error: {str(e)}")
+        logging.error(f"[‼️] Allgemeiner Fehler: {str(e)}")
         return {"status": "error", "message": str(e)}
 
-def trade_if_needed(signal: str):
+
+def trade_if_needed(signal: str, symbol: str):
+    """Führt je nach Signal eine Kauf- oder Verkaufsorder aus."""
+    logging.info(f"Trade-Entscheidung für {symbol}: {signal}")
     if signal == "BUY":
-        return place_order(side="BUY")
+        return place_order(symbol, "BUY")
     elif signal == "SELL":
-        return place_order(side="SELL")
+        return place_order(symbol, "SELL")
     else:
-        return {"status": "no_action", "message": "Signal was HOLD"}
-
-# 📌 کلید API تست‌نت بایننس (از حساب تست‌نت بگیر)
-
-
-# سرمایه اولیه کاربر (برای مثال)
-initial_capital_usdt = 100
-
-# درصد سرمایه برای هر ترید
-risk_percentage = 0.05  # یعنی ۵٪
-
-# حداقل مجاز برای سفارش در بایننس (برای BTCUSDT معمولاً ۱۰ دلار)
-MIN_NOTIONAL = 10
-
-def place_order(symbol="BTCUSDT", side="BUY"):
-    try:
-        amount_in_usdt = initial_capital_usdt * risk_percentage
-
-        print(f"[⚙️] Trying to {side} {symbol} with ${amount_in_usdt:.2f}")
-
-        if amount_in_usdt < MIN_NOTIONAL:
-            print(f"[⛔️] Order skipped: ${amount_in_usdt:.2f} is below Binance MIN_NOTIONAL (${MIN_NOTIONAL})")
-            return
-
-        if side == "BUY":
-            order = client.order_market_buy(
-                symbol=symbol,
-                quoteOrderQty=amount_in_usdt
-            )
-        else:
-            order = client.order_market_sell(
-                symbol=symbol,
-                quoteOrderQty=amount_in_usdt
-            )
-
-        print(f"[✅] Order placed: {order}")
-        return order
-
-    except BinanceAPIException as e:
-        print(f"[❌] Binance API Error: {e.message}")
-    except Exception as e:
-        print(f"[‼️] General Error: {str(e)}")
+        logging.info(f"Kein Trade ausgeführt für {symbol} (Signal: HOLD)")
+        return {"status": "no_action", "message": "Signal war HOLD"}
