@@ -1,4 +1,4 @@
-# multi_coin_agent.py (mit dynamischer Coin Discovery & erweitertem Logging)
+# multi_coin_agent.py (mit dynamischer Coin Discovery & verbessertem Entscheidungs-Logging)
 
 from sentiment import analyze_sentiment
 from news_fetcher import fetch_crypto_news
@@ -26,10 +26,13 @@ def analyze_coin(symbol):
         rsi = get_rsi(symbol)
         macd_signal = get_macd(symbol)
 
+        # Entscheidungs-Logging zur Analyse
+        logging.info(f"→ Entscheidungsbasis für {symbol}: Sentiment={sentiment_score}, RSI={rsi}, MACD={macd_signal}")
+
         # Entscheidungslogik mit Sentiment, RSI und MACD
-        if sentiment_score > 0.5 and rsi is not None and rsi < 30 and macd_signal == "BUY":
+        if sentiment_score > 0 and rsi is not None and rsi < 50 and macd_signal == "BUY":
             signal = "BUY"
-        elif sentiment_score < -0.5 and rsi is not None and rsi > 70 and macd_signal == "SELL":
+        elif sentiment_score < 0 and rsi is not None and rsi > 50 and macd_signal == "SELL":
             signal = "SELL"
         else:
             signal = "HOLD"
@@ -44,7 +47,7 @@ def analyze_coin(symbol):
         }
 
         # Debug-Logging
-        logging.info(f"{symbol} ➜ Preis: ${price:.2f}, Sentiment: {sentiment_score}, RSI: {rsi}, MACD: {macd_signal}, Signal: {signal}")
+        logging.info(f"{symbol} ➜ Preis: ${price:.2f}, Signal: {signal}")
 
         # Nur handeln, wenn BUY oder SELL
         result = {}
