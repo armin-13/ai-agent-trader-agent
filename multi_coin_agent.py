@@ -1,10 +1,11 @@
-# multi_coin_agent.py (robustere Analyse + Testmodus)
+# multi_coin_agent.py (angepasst mit externem technischen Analysemodul)
 
 from sentiment import analyze_sentiment
 from news_fetcher import fetch_crypto_news
 from trader import get_price, trade_if_needed
-from indicators import get_rsi, get_macd
+from aiagent.technical_analysis import calculate_indicators, generate_signal
 from coin_discovery import get_top_usdt_symbols
+from binance_data import get_ohlcv
 import logging
 
 # Logging konfigurieren
@@ -20,34 +21,24 @@ COINS = get_top_usdt_symbols(limit=25, min_volume_usdt=1000000)
 
 def analyze_coin(symbol):
     try:
+        # Fetch news and sentiment
         news = fetch_crypto_news(symbol)
         sentiment_score = analyze_sentiment(news)
         price = get_price(symbol)
-        rsi = get_rsi(symbol)
-        macd_signal = get_macd(symbol)
+
+        # Berechne technische Indikatoren aus OHLCV
+        df = get_ohlcv(symbol)
+        df = calculate_indicators(df)
+        signal = generate_signal(df)
 
         # Entscheidungs-Logging zur Analyse
-        logging.info(f"→ Entscheidungsbasis für {symbol}: Sentiment={sentiment_score}, RSI={rsi}, MACD={macd_signal}")
-
-        # Entscheidungslogik mit Sentiment, RSI und MACD
-        if sentiment_score > 0 and rsi is not None and rsi < 50 and macd_signal == "BUY":
-            signal = "BUY"
-        elif sentiment_score < 0 and rsi is not None and rsi > 50 and macd_signal == "SELL":
-            signal = "SELL"
-        else:
-            signal = "HOLD"
-
-        # TESTMODUS: Erzwinge BUY für einen Coin (nur zu Testzwecken aktivieren)
-        # if symbol == "BTCUSDT":
-        #     signal = "BUY"
+        logging.info(f"→ Entscheidungsbasis für {symbol}: Sentiment={sentiment_score}, Signal={signal}")
 
         analysis = {
             "symbol": symbol,
             "price": price,
             "signal": signal,
-            "sentiment": sentiment_score,
-            "rsi": rsi,
-            "macd": macd_signal
+            "sentiment": sentiment_score
         }
 
         logging.info(f"{symbol} ➜ Preis: ${price:.2f}, Signal: {signal}")
@@ -81,3 +72,4 @@ if __name__ == "__main__":
     result = analyze_all()
     for entry in result:
         print(entry)
+
