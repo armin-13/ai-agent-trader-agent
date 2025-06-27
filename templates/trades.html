@@ -1,0 +1,43 @@
+<!-- trades.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trade Historie</title>
+    <style>
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px; border: 1px solid #ccc; text-align: center; }
+        th { background: #333; color: white; }
+    </style>
+</head>
+<body>
+    <h1>📊 Letzte Trades</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Timestamp</th>
+                <th>Symbol</th>
+                <th>Aktion</th>
+                <th>Preis</th>
+                <th>Sentiment</th>
+                <th>RSI</th>
+                <th>MACD</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for trade in trades %}
+            <tr>
+                <td>{{ trade[0] }}</td>
+                <td>{{ trade[1] }}</td>
+                <td>{{ trade[2] }}</td>
+                <td>{{ trade[3] }}</td>
+                <td>${{ '%.2f' % trade[4] }}</td>
+                <td>{{ trade[5] }}</td>
+                <td>{{ trade[6] }}</td>
+                <td>{{ trade[7] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
