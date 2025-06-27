@@ -1,12 +1,15 @@
-# main.py (kombiniert mit Dashboard & API-Routen)
+# main.py (inkl. Signal-Multi-API und Dashboard)
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Query
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from apscheduler.schedulers.background import BackgroundScheduler
 from multi_coin_agent import analyze_all
-from trade_dashboard import app as trade_dashboard_app  # Falls als Sub-App eingebunden
+from trade_dashboard import app as trade_dashboard_app
 import logging
+import pandas as pd
+from aiagent.binance_data import get_ohlcv
+from aiagent.technical_analysis import calculate_indicators, generate_signal
 
 # Logging konfigurieren
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -48,11 +51,11 @@ scheduler.start()
 
 logging.info("AI Trading Agent gestartet")
 
-# --- Erweiterung: REST API für Symboldaten (optional) ---
-# (Platzhalter – kann an echte Binance-API oder Datenquelle angepasst werden)
+# --- REST API: Platzhalter für Symbol-/Preisdaten ---
 @app.get("/symbols")
 def get_symbols():
     return {"symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT"]}
+
 
 @app.get("/prices")
 def get_prices():
@@ -61,3 +64,29 @@ def get_prices():
         "ETHUSDT": 3400.0,
         "SOLUSDT": 145.25
     }
+
+# --- REST API: Technische Signal-Ausgabe für ein Symbol ---
+@app.get("/signal")
+def signal(symbol: str = "BTCUSDT"):
+    try:
+        df = get_ohlcv(symbol)
+        df = calculate_indicators(df)
+        signal = generate_signal(df)
+        return {"symbol": symbol, "signal": signal}
+    except Exception as e:
+        logging.error(f"Fehler bei Signalscan für {symbol}: {e}")
+        return {"symbol": symbol, "error": str(e)}
+
+# --- NEU: Multi-Symbol Signal API ---
+@app.get("/signals")
+def signals(symbols: list[str] = Query(default=["BTCUSDT", "ETHUSDT", "SOLUSDT"])):
+    response = []
+    for symbol in symbols:
+        try:
+            df = get_ohlcv(symbol)
+            df = calculate_indicators(df)
+            signal = generate_signal(df)
+            response.append({"symbol": symbol, "signal": signal})
+        except Exception as e:
+            response.append({"symbol": symbol, "error": str(e)})
+    return response

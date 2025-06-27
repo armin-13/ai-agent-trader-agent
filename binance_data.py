@@ -1,13 +1,14 @@
-# main.py (kombiniert mit Dashboard & Live Binance API)
+# main.py (kombiniert mit Dashboard & Live Binance API, verbessert)
 
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from apscheduler.schedulers.background import BackgroundScheduler
 from multi_coin_agent import analyze_all
-from trade_dashboard import app as trade_dashboard_app  # Falls als Sub-App eingebunden
+from trade_dashboard import app as trade_dashboard_app
 import logging
 import requests
+import pandas as pd
 
 # Logging konfigurieren
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -52,39 +53,53 @@ logging.info("AI Trading Agent gestartet")
 # --- Erweiterung: REST API für Live-Symbole und Preise von Binance ---
 
 def get_tradeable_symbols(base_currency="USDT"):
-    url = "https://api.binance.com/api/v3/exchangeInfo"
-    response = requests.get(url)
-    data = response.json()
+    try:
+        url = "https://api.binance.com/api/v3/exchangeInfo"
+        response = requests.get(url, timeout=10)
+        data = response.json()
 
-    symbols = []
-    for s in data['symbols']:
-        if s['status'] == 'TRADING' and s['quoteAsset'] == base_currency:
-            symbols.append(s['symbol'])
-
-    return symbols
+        return [s['symbol'] for s in data['symbols'] if s['status'] == 'TRADING' and s['quoteAsset'] == base_currency]
+    except Exception as e:
+        logging.error(f"Fehler beim Abrufen handelbarer Symbole: {e}")
+        return []
 
 
 def get_latest_prices(symbols):
-    url = "https://api.binance.com/api/v3/ticker/price"
-    response = requests.get(url)
-    prices_data = response.json()
-
-    price_dict = {}
-    for item in prices_data:
-        if item['symbol'] in symbols:
-            price_dict[item['symbol']] = float(item['price'])
-
-    return price_dict
+    try:
+        url = "https://api.binance.com/api/v3/ticker/price"
+        response = requests.get(url, timeout=10)
+        prices_data = response.json()
+        return {item['symbol']: float(item['price']) for item in prices_data if item['symbol'] in symbols}
+    except Exception as e:
+        logging.error(f"Fehler beim Abrufen von Preisen: {e}")
+        return {}
 
 
 @app.get("/symbols")
 def api_get_symbols(base: str = "USDT"):
-    symbols = get_tradeable_symbols(base)
-    return {"base": base, "symbols": symbols}
+    return {"base": base, "symbols": get_tradeable_symbols(base)}
 
 
 @app.get("/prices")
 def api_get_prices(base: str = "USDT"):
     symbols = get_tradeable_symbols(base)
-    prices = get_latest_prices(symbols)
-    return prices
+    return get_latest_prices(symbols)
+
+
+@app.get("/ohlcv")
+def get_ohlcv(symbol: str = "BTCUSDT", interval: str = "1m", limit: int = 100):
+    try:
+        url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}"
+        response = requests.get(url, timeout=10)
+        data = response.json()
+
+        df = pd.DataFrame(data, columns=[
+            "timestamp", "open", "high", "low", "close", "volume",
+            "close_time", "quote_asset_volume", "num_trades",
+            "taker_buy_base", "taker_buy_quote", "ignore"
+        ])
+        df["close"] = df["close"].astype(float)
+        return df[["timestamp", "close"]].tail(50).to_dict(orient="records")
+    except Exception as e:
+        logging.error(f"Fehler beim Abrufen von OHLCV-Daten: {e}")
+        return {"error": str(e)}
