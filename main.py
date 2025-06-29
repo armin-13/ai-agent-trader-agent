@@ -9,6 +9,7 @@ from trade_dashboard import app as trade_dashboard_app
 import logging
 import requests
 import pandas as pd
+from trader.analysis import get_technical_indicators
 
 # Logging konfigurieren
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -97,3 +98,18 @@ def api_get_ohlcv(symbol: str = "BTCUSDT", interval: str = "1m", limit: int = 10
     except Exception as e:
         logging.error(f"Fehler beim Abrufen von OHLCV-Daten: {e}")
         return {"error": str(e)}
+
+# --- REST API für technische Analyse eines Symbols ---
+@app.get("/indicators")
+def api_indicators(symbol: str = "BTCUSDT"):
+    try:
+        result = get_technical_indicators(symbol)
+        return {
+            "symbol": symbol,
+            "rsi": result.get("rsi"),
+            "macd": result.get("macd"),
+            "signal": result.get("signal")
+        }
+    except Exception as e:
+        logging.error(f"Fehler bei technischer Analyse von {symbol}: {e}")
+        return {"symbol": symbol, "error": str(e)}
