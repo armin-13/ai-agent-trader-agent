@@ -9,7 +9,8 @@ from trade_dashboard import app as trade_dashboard_app
 import logging
 import requests
 import pandas as pd
-from trader.analysis import get_technical_indicators
+from aiagent.technical_analysis import calculate_indicators, generate_signal
+from aiagent.binance_data import get_ohlcv
 
 # Logging konfigurieren
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -103,12 +104,16 @@ def api_get_ohlcv(symbol: str = "BTCUSDT", interval: str = "1m", limit: int = 10
 @app.get("/indicators")
 def api_indicators(symbol: str = "BTCUSDT"):
     try:
-        result = get_technical_indicators(symbol)
+        df = get_ohlcv(symbol)
+        df = calculate_indicators(df)
+        signal = generate_signal(df)
+        rsi = df["RSI"].iloc[-1] if "RSI" in df.columns else None
+        macd = df["MACD"].iloc[-1] if "MACD" in df.columns else None
         return {
             "symbol": symbol,
-            "rsi": result.get("rsi"),
-            "macd": result.get("macd"),
-            "signal": result.get("signal")
+            "rsi": rsi,
+            "macd": macd,
+            "signal": signal
         }
     except Exception as e:
         logging.error(f"Fehler bei technischer Analyse von {symbol}: {e}")
